@@ -3,6 +3,7 @@ import sys
 import colorama
 from termcolor import colored
 import os
+import json
 
 def print_err(text : str) -> None:
     sys.stderr.write("\n[")
@@ -21,15 +22,26 @@ colorama.init()
 def main():
     project_dir = os.getcwd();
     print_success("Building Project...")
-    response = os.system(f"cmake -B{project_dir}/build {project_dir} > /dev/null");
+
+    build_flags = []
+
+    try:
+        with open(f"{project_dir}/CMakeOptions.json", "r") as cmakeoptions:
+            data = json.loads(cmakeoptions.read())
+            for key in data:
+                build_flags.append(f"-D{key}={data[key]}")
+    except FileNotFoundError:
+        pass
+
+    response = os.system(f"cmake -B{project_dir}/build {project_dir} {' '.join(build_flags)}> /dev/null");
     if response != 0:
         print_err("CMake Raised Error")
         sys.exit(-1)
-
     response = os.system(f"cmake --build {project_dir}/build > /dev/null")
     if response != 0:
         print_err("Makefile Builder Raised Error")
         sys.exit(-1)
+
     print_success("Built !")
 
 if __name__ == "__main__":

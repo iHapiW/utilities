@@ -4,6 +4,8 @@ import colorama
 from termcolor import colored
 import os
 import re
+import json
+
 def print_err(text : str) -> None:
     sys.stderr.write("\n[")
     sys.stderr.write(colored("-", "red"));
@@ -20,10 +22,19 @@ colorama.init()
 
 def main():
     project_dir = os.getcwd();
+    print_success("Building Project...")
 
-    print_success("Building Projects ...")
+    build_flags = []
 
-    response = os.system(f"cmake -B{project_dir}/build {project_dir} > /dev/null");
+    try:
+        with open(f"{project_dir}/CMakeOptions.json", "r") as cmakeoptions:
+            data = json.loads(cmakeoptions.read())
+            for key in data:
+                build_flags.append(f"-D{key}={data[key]}")
+    except FileNotFoundError:
+        pass
+
+    response = os.system(f"cmake -B{project_dir}/build {project_dir} {' '.join(build_flags)}> /dev/null");
     if response != 0:
         print_err("CMake Raised Error")
         sys.exit(-1)
@@ -38,13 +49,13 @@ def main():
             for project_name in resp:
                 if sys.platform == "linux":
                     print_success(f"Running {project_name} ...\n")
-                    os.system(f"{project_dir}/build/{project_name}")
+                    os.system(f"{project_dir}/build/{project_name} {' '.join(sys.argv)}")
                 elif sys.platform == "win32":
                     print_success(f"Running {project_name}.exe ...\n")
-                    os.system(f"{project_dir}/build/{project_name}.exe")
+                    os.system(f"{project_dir}/build/{project_name}.exe {' '.join(sys.argv)}")
                 else:
                     print_err("Unknown System platform to Execute Project");
-                print("\n---------------------------------------------")
+                print("---------------------------------------------")
 
     except FileNotFoundError:
         print_err("No Project Found in this Directory")

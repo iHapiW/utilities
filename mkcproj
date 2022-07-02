@@ -22,6 +22,10 @@ file(GLOB SRC
 target_include_directories(${{PROJECT_NAME}} PRIVATE "${{CMAKE_CURRENT_SOURCE_DIR}}/include")
 """
 
+cmake_flags = """{
+    "CMAKE_BUILD_TYPE" : "Debug"
+}"""
+
 # Src file for Exe Projects
 exe_main = """ #include <stdio.h>
 int main(int argc, char* argv[]) 
@@ -118,6 +122,8 @@ def main():
     if project_type == "exe":
         with open(f"{project_dir}/CMakeLists.txt", "w") as cmakelists:
             cmakelists.write(cmake_config(project_name, project_type))
+        with open(f"{project_dir}/CMakeOptions.json", "w") as cmakeoptions:
+            cmakeoptions.write(cmake_flags);
         os.mkdir(f"{project_dir}/src")
         os.mkdir(f"{project_dir}/include")
         with open(f"{project_dir}/src/main.c", "w") as main:
@@ -127,6 +133,8 @@ def main():
     elif project_type == "libstatic" or project_type == "libdynamic":
         with open(f"{project_dir}/CMakeLists.txt", "w") as cmakelists:
             cmakelists.write(cmake_config(project_name, project_type))
+        with open(f"{project_dir}/CMakeOptions.json", "w") as cmakeoptions:
+            cmakeoptions.write(cmake_flags);
         os.mkdir(f"{project_dir}/src")
         os.mkdir(f"{project_dir}/include")
         with open(f"{project_dir}/src/{project_name}.c", "w") as src:
