@@ -1,0 +1,54 @@
+#!/bin/python3
+import sys
+import colorama
+from termcolor import colored
+import os
+import re
+def print_err(text : str) -> None:
+    sys.stderr.write("\n[")
+    sys.stderr.write(colored("-", "red"));
+    sys.stderr.write("]")
+    sys.stderr.write(" {0}\n".format(text));
+
+def print_success(text : str) -> None:
+    sys.stderr.write("[")
+    sys.stderr.write(colored("+", "green"));
+    sys.stderr.write("]")
+    sys.stderr.write(" {0}\n".format(text));
+
+colorama.init()
+
+def main():
+    project_dir = os.getcwd();
+
+    print_success("Building Projects ...")
+
+    response = os.system(f"cmake -B{project_dir}/build {project_dir} > /dev/null");
+    if response != 0:
+        print_err("CMake Raised Error")
+        sys.exit(-1)
+    response = os.system(f"cmake --build {project_dir}/build > /dev/null")
+    if response != 0:
+        print_err("Makefile Builder Raised Error")
+        sys.exit(-1)
+
+    try:
+        with open(f"{project_dir}/CMakeLists.txt", "r") as cmakelists:
+            resp = re.findall(r"^project\(\s*?(\w+).*\)$", cmakelists.read(), re.MULTILINE)
+            for project_name in resp:
+                if sys.platform == "linux":
+                    print_success(f"Running {project_name} ...\n")
+                    os.system(f"{project_dir}/build/{project_name}")
+                elif sys.platform == "win32":
+                    print_success(f"Running {project_name}.exe ...\n")
+                    os.system(f"{project_dir}/build/{project_name}.exe")
+                else:
+                    print_err("Unknown System platform to Execute Project");
+                print("\n---------------------------------------------")
+
+    except FileNotFoundError:
+        print_err("No Project Found in this Directory")
+        sys.exit(-1)
+
+if __name__ == "__main__":
+    main()
