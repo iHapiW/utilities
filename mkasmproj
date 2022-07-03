@@ -1,0 +1,111 @@
+#!/bin/python3
+
+import sys
+import os
+import colorama
+from termcolor import colored
+
+# CMakeLists.txt For All Projects
+cmake_file_content = """cmake_minimum_required(VERSION 3.16)
+
+set(CMAKE_ASM_NASM_LINK_FLAGS "-g -melf_i386 ")
+set(CMAKE_ASM_NASM_LINK_EXECUTABLE "ld <CMAKE_ASM_NASM_LINK_FLAGS> <LINK_FLAGS> <OBJECTS>  -o <TARGET> <LINK_LIBRARIES>")
+set(CMAKE_ASM_NASM_OBJECT_FORMAT elf32)
+set(CMAKE_ASM_NASM_FLAGS_DEBUG "-g -F dwarf")
+
+project({0} VERSION 1.0.0 LANGUAGES ASM_NASM)
+
+file(GLOB SRC
+    "${{CMAKE_CURRENT_SOURCE_DIR}}/src/*.asm"
+    )
+
+add_executable(${{PROJECT_NAME}} ${{SRC}})
+"""
+
+cmake_flags = """{
+    "CMAKE_BUILD_TYPE" : "Debug"
+}"""
+
+# Src file for Exe Projects
+exe_main = """section .data
+    msg db "Hello world!",10
+    len equ $-msg
+
+section .text
+    global _start
+
+_start:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, msg
+    mov edx, len
+    int 0x80
+    
+    mov eax, 1
+    mov ebx, 0
+    int 0x80"""
+
+# Help Message
+help = "Usage: {0} {{PROJECT_NAME}}"
+
+# Helper Funcitons
+
+def print_err(text : str) -> None:
+    sys.stderr.write("[")
+    sys.stderr.write(colored("-", "red"));
+    sys.stderr.write("]")
+    sys.stderr.write(" {0}\n".format(text));
+
+def print_success(text : str) -> None:
+    sys.stderr.write("[")
+    sys.stderr.write(colored("+", "green"));
+    sys.stderr.write("]")
+    sys.stderr.write(" {0}\n".format(text));
+
+# Enable Colors
+colorama.init()
+
+def main():
+
+    # Small Gap between Command and Output
+    print()
+
+    argc = len(sys.argv)
+
+    this_file = sys.argv[0]
+
+    # Print Help if Needed
+    if argc > 2 and (sys.argv[1] == "--help" or sys.argv[1] == "-h"):
+        print(help.format(this_file));
+        sys.exit(-1);
+
+    # Check if we have Enough Argument
+    if argc < 2:
+        print_err("Not Enough Argument")
+        print(help.format(this_file));
+        sys.exit(-1);
+
+    project_name = sys.argv[1];
+
+    # Get Project Path
+    executed_path = os.getcwd()
+    project_dir = f"{executed_path}/{sys.argv[1]}"
+
+    # Check if Directory Exists
+    if os.path.exists(project_dir):
+        print_err("Directory with Project Name Exists!");
+        sys.exit(-1);
+
+    os.mkdir(project_dir)
+
+    with open(f"{project_dir}/CMakeLists.txt", "w") as cmakelists:
+        cmakelists.write(cmake_file_content.format(project_name))
+    with open(f"{project_dir}/CMakeOptions.json", "w") as cmakeoptions:
+        cmakeoptions.write(cmake_flags);
+    os.mkdir(f"{project_dir}/src")
+    with open(f"{project_dir}/src/main.asm", "w") as main:
+        main.write(exe_main)
+    print_success(f"Successfully Made {project_name} Project")
+
+if __name__ == "__main__":
+    main()

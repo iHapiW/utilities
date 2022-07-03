@@ -28,7 +28,12 @@ def main():
 
     try:
         with open(f"{project_dir}/CMakeOptions.json", "r") as cmakeoptions:
-            data = json.loads(cmakeoptions.read())
+            try:
+                data = json.loads(cmakeoptions.read())
+            except json.JSONDecodeError:
+                print_err("Could'nt Decode CMakeOptions.json")
+                sys.exit(-1)
+
             for key in data:
                 build_flags.append(f"-D{key}={data[key]}")
     except FileNotFoundError:
