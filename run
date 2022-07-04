@@ -50,7 +50,7 @@ def main():
 
     try:
         with open(f"{project_dir}/CMakeLists.txt", "r") as cmakelists:
-            resp = re.findall(r"^project\(\s*?(\w+).*\)$", cmakelists.read(), re.MULTILINE)
+            resp = re.findall(r"^project\(\s*?([^\s]+).*\)$", cmakelists.read(), re.MULTILINE)
             for project_name in resp:
                 if sys.platform == "linux":
                     print_success(f"Running {project_name} ...\n")
