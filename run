@@ -60,7 +60,7 @@ def main():
                     os.system(f"{project_dir}/build/{project_name}.exe {' '.join(sys.argv)}")
                 else:
                     print_err("Unknown System platform to Execute Project");
-                print("---------------------------------------------")
+                print("\n---------------------------------------------")
 
     except FileNotFoundError:
         print_err("No Project Found in this Directory")

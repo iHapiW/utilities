@@ -1,0 +1,27 @@
+#!/usr/bin/python3
+
+import requests
+import json
+import sys
+from termcolor import colored
+
+def print_err(text : str) -> None:
+    sys.stderr.write("\n[")
+    sys.stderr.write(colored("-", "red"));
+    sys.stderr.write("]")
+    sys.stderr.write(" {0}\n".format(text));
+
+def print_success(text : str) -> None:
+    sys.stderr.write("[")
+    sys.stderr.write(colored("+", "green"));
+    sys.stderr.write("]")
+    sys.stderr.write(" {0}\n".format(text));
+
+try:
+    data = json.loads(requests.get("http://ip-api.com/json?fields=8721").content)
+    print_success(f"IP: {data['query']}")
+    print_success(f"Country: {data['country']}")
+    print_success(f"City: {data['city']}")
+    print_success(f"ISP: {data['isp']}")
+except:
+    print_err("Could'nt get IP Information")    
