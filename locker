@@ -5,10 +5,11 @@ from Cryptodome.Random import get_random_bytes
 import hashlib
 import sys
 import colorama
+from getpass import getpass
 from termcolor import colored
 
 # Help Message
-help = """Usage: {0} Operation FilePath Password
+help = """Usage: {0} Operation FilePath
 
 Operations:
     lock - to encrypt the file using password provided
@@ -45,16 +46,23 @@ def main():
     colorama.init()
 
     # Check for sufficient arguments and the pattern
-    if ( len(sys.argv) != 4 ) or (sys.argv[1] != "lock" and sys.argv[1] != "unlock"):
+    if ( len(sys.argv) != 3 ) or (sys.argv[1] != "lock" and sys.argv[1] != "unlock"):
         print_err(help.format(sys.argv[0]))
         return
+
+    passwd = getpass(prompt="Enter Password: ")
+    if(sys.argv[1] == "lock"):
+        passwd_rep = getpass(prompt="Enter Password Again: ")
+        if( passwd != passwd_rep):
+            print_err("This is not the same password!")
+            return
 
     # Perform the operation and store the `result`
     result = b""
     try:
         with open(sys.argv[2], 'rb') as f:
             SHA256 = hashlib.sha256()
-            SHA256.update(sys.argv[3].encode());
+            SHA256.update(passwd.encode());
             key = SHA256.digest()
             data = f.read()
             if(sys.argv[1] == "lock"):
