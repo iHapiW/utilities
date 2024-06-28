@@ -6,6 +6,7 @@ Done! You can use the project now.
 <h3>Requirements</h3>
      - colorama<br/>
      - termcolor
+     - PyCryptodome
 
 # Contributors
 - iHapiW
