@@ -27,7 +27,8 @@ cmake_flags = """{
 }"""
 
 # Src file for Exe Projects
-exe_main = """ #include <stdio.h>
+exe_main = """#include <stdio.h>
+
 int main(int argc, char* argv[]) 
 {
     printf("Hello World\\n");
