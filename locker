@@ -5,6 +5,7 @@ from Cryptodome.Random import get_random_bytes
 import hashlib
 import sys
 import colorama
+import os
 from getpass import getpass
 from termcolor import colored
 
@@ -59,6 +60,7 @@ def main():
 
     # Perform the operation and store the `result`
     result = b""
+    resultfile = sys.argv[2]
     try:
         with open(sys.argv[2], 'rb') as f:
             SHA256 = hashlib.sha256()
@@ -67,8 +69,12 @@ def main():
             data = f.read()
             if(sys.argv[1] == "lock"):
                 result = encrypt_data(key, data)
+                resultfile += ".locked"
             elif(sys.argv[1] == "unlock"):
                 result = decrypt_data(key, data)
+                if( resultfile.endswith(".locked") ):
+                    n = len(sys.argv[2])
+                    resultfile = sys.argv[2][0:n-7]
     except FileNotFoundError:
         print_err("File Doesn't Exist!");
         return
@@ -88,12 +94,17 @@ def main():
 
     # Try writing it back to the original file
     try:
-        with open(sys.argv[2], 'wb') as f:
+        with open(resultfile, 'wb') as f:
             f.write(result)
     except PermissionError:
         print_err("Insufficient permission to write file!")
+        return
     except Exception as e:
         print_err(f"Unknown Error Occured: {e}")
+        return
+
+    if( resultfile != sys.argv[2] ):
+        os.remove(sys.argv[2])
 
 if __name__ == "__main__":
     main()
