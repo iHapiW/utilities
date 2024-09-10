@@ -1,7 +1,8 @@
 #!/bin/python3
 
-import sys
 import os
+import sys
+
 import colorama
 from termcolor import colored
 
@@ -17,29 +18,37 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(GLOB SRC 
     "${{CMAKE_CURRENT_SOURCE_DIR}}/src/*.cpp"
-    "${{CMAKE_CURRENT_SOURCE_DIR}}/src/*.cxx"
     "${{CMAKE_CURRENT_SOURCE_DIR}}/src/*.c"
     "${{CMAKE_CURRENT_SOURCE_DIR}}/include/*.hpp"
-    "${{CMAKE_CURRENT_SOURCE_DIR}}/include/*.hxx"
     "${{CMAKE_CURRENT_SOURCE_DIR}}/include/*.h"
     "${{CMAKE_CURRENT_SOURCE_DIR}}/include/*.tpp"
-    "${{CMAKE_CURRENT_SOURCE_DIR}}/include/*.txx"
     "${{CMAKE_CURRENT_SOURCE_DIR}}/include/*.ipp"
-    "${{CMAKE_CURRENT_SOURCE_DIR}}/include/*.ixx"
 )
 
 {b}
 
-if(MSVC)
-    target_compile_options(${{PROJECT_NAME}} PRIVATE /permissive /W4 /WX)
-else()
-    target_compile_options(${{PROJECT_NAME}} PRIVATE -pedantic-errors -Wall -Weffc++ -Wextra -Wsign-conversion -Werror)
-endif()
+target_compile_options(${{PROJECT_NAME}}
+    PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:
+        /W4                 # Equivalent to -Wall
+        /WX                 # Equivalent to -Werror
+        /permissive-        # Equivalent to -pedantic-errors
+        /sdl                # Additional security checks (similar to -Weffc++)
+    >
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
+        -pedantic-errors    # Disable Compiler Extensions ( So it is compatible with any system )
+        -Wall               # Maximum Warning Level
+        -Weffc++            # Maximum Warning Level
+        -Wextra             # Maximum Warning Level
+        -Wsign-conversion   # Maximum Warning Level 
+        -Werror             # Warnings as Errors
+    >
+)
 
 target_include_directories(${{PROJECT_NAME}} PRIVATE "${{CMAKE_CURRENT_SOURCE_DIR}}/include")
 """
 
-#Making Build Time CMAKE Flags in Json ( To Use later in build & run )
+# Making Build Time CMAKE Flags in Json ( To Use later in build & run )
 cmake_flags = """{
     "CMAKE_BUILD_TYPE" : "Debug"
 }"""
@@ -47,15 +56,13 @@ cmake_flags = """{
 # Src file for Exe Projects
 exe_main = """#include <iostream>
 
-int main() 
-{
-    std::cout << "Hello World\\n";
-    return 0;
+int main() {
+    std::cout << "Hello World!" << std::endl;
 }
 """
 
 # Src File for lib Projects
-lib_main = "#include \"{0}.hpp\""
+lib_main = '#include "{0}.hpp"'
 
 # Header File for Lib Projects
 lib_header = """#ifndef {0}_HPP
@@ -73,30 +80,41 @@ Project Types:
 
 # Helper Funcitons
 
-def print_err(text : str) -> None:
-    sys.stderr.write("[")
-    sys.stderr.write(colored("-", "red"));
-    sys.stderr.write("]")
-    sys.stderr.write(" {0}\n".format(text));
 
-def print_success(text : str) -> None:
+def print_err(text: str) -> None:
     sys.stderr.write("[")
-    sys.stderr.write(colored("+", "green"));
+    sys.stderr.write(colored("-", "red"))
     sys.stderr.write("]")
-    sys.stderr.write(" {0}\n".format(text));
+    sys.stderr.write(" {0}\n".format(text))
 
-def cmake_config(project_name : str, project_type : str) -> str:
+
+def print_success(text: str) -> None:
+    sys.stderr.write("[")
+    sys.stderr.write(colored("+", "green"))
+    sys.stderr.write("]")
+    sys.stderr.write(" {0}\n".format(text))
+
+
+def cmake_config(project_name: str, project_type: str) -> str:
     if project_type == "exe":
-        return cmake_file_content.format(a=project_name, b="add_executable(${PROJECT_NAME} ${SRC})")
+        return cmake_file_content.format(
+            a=project_name, b="add_executable(${PROJECT_NAME} ${SRC})"
+        )
     elif project_type == "libstatic":
-        return cmake_file_content.format(a=project_name, b="add_library(${PROJECT_NAME} STATIC ${SRC})")
+        return cmake_file_content.format(
+            a=project_name, b="add_library(${PROJECT_NAME} STATIC ${SRC})"
+        )
     elif project_type == "libdynamic":
-        return cmake_file_content.format(a=project_name, b="add_library(${PROJECT_NAME} SHARED ${SRC})")
+        return cmake_file_content.format(
+            a=project_name, b="add_library(${PROJECT_NAME} SHARED ${SRC})"
+        )
     else:
         return ""
 
+
 # Enable Colors
 colorama.init()
+
 
 def main():
 
@@ -109,17 +127,17 @@ def main():
 
     # Print Help if Needed
     if argc > 2 and (sys.argv[1] == "--help" or sys.argv[1] == "-h"):
-        print(help.format(this_file));
-        sys.exit(-1);
+        print(help.format(this_file))
+        sys.exit(-1)
 
     # Check if we have Enough Argument
     if argc < 3:
         print_err("Not Enough Argument")
-        print(help.format(this_file));
-        sys.exit(-1);
+        print(help.format(this_file))
+        sys.exit(-1)
 
-    project_name = sys.argv[1];
-    project_type = sys.argv[2];
+    project_name = sys.argv[1]
+    project_type = sys.argv[2]
 
     # Get Project Path
     executed_path = os.getcwd()
@@ -127,14 +145,14 @@ def main():
 
     # Check if Directory Exists
     if os.path.exists(project_dir):
-        print_err("Directory with Project Name Exists!");
-        sys.exit(-1);
+        print_err("Directory with Project Name Exists!")
+        sys.exit(-1)
 
     # Check Project Type
     if project_type not in ["exe", "libstatic", "libdynamic"]:
         print_err("Invalid Project Type!")
         print(help.format(this_file))
-        sys.exit(-1);
+        sys.exit(-1)
 
     os.mkdir(project_dir)
 
@@ -142,23 +160,24 @@ def main():
         with open(f"{project_dir}/CMakeLists.txt", "w") as cmakelists:
             cmakelists.write(cmake_config(project_name, project_type))
         with open(f"{project_dir}/CMakeOptions.json", "w") as cmakeoptions:
-            cmakeoptions.write(cmake_flags);
+            cmakeoptions.write(cmake_flags)
         os.mkdir(f"{project_dir}/src")
         os.mkdir(f"{project_dir}/include")
-        with open(f"{project_dir}/src/main.cxx", "w") as main:
+        with open(f"{project_dir}/src/main.cpp", "w") as main:
             main.write(exe_main)
 
     elif project_type == "libstatic" or project_type == "libdynamic":
         with open(f"{project_dir}/CMakeLists.txt", "w") as cmakelists:
             cmakelists.write(cmake_config(project_name, project_type))
         with open(f"{project_dir}/CMakeOptions.json", "w") as cmakeoptions:
-            cmakeoptions.write(cmake_flags);
+            cmakeoptions.write(cmake_flags)
         os.mkdir(f"{project_dir}/src")
         os.mkdir(f"{project_dir}/include")
-        with open(f"{project_dir}/src/{project_name}.cxx", "w") as src:
+        with open(f"{project_dir}/src/{project_name}.cpp", "w") as src:
             src.write(lib_main.format(project_name))
-        with open(f"{project_dir}/include/{project_name}.hxx", "w") as header:
+        with open(f"{project_dir}/include/{project_name}.hpp", "w") as header:
             header.write(lib_header.format(project_name.upper()))
+
 
 if __name__ == "__main__":
     main()
