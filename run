@@ -1,10 +1,13 @@
 #!/bin/python3
 import sys
-import colorama
-from termcolor import colored
+import shutil
 import os
 import re
 import json
+import subprocess
+
+import colorama
+from termcolor import colored
 
 
 def print_err(text: str) -> None:
@@ -64,7 +67,7 @@ def build(project_dir, has_cmake_presets, preset):
 
 
 def main():
-    preset = "default"
+    preset = "debug"
     if len(sys.argv) > 1 and sys.argv[1] != "--args":
         preset = sys.argv[1]
 
@@ -75,6 +78,19 @@ def main():
 
     configure(project_dir, has_cmake_presets, preset)
     build_dir = build(project_dir, has_cmake_presets, preset)
+
+    result = subprocess.run(
+        ["bash", "-c", f"echo {build_dir}"], capture_output=True, text=True
+    )
+    build_dir = result.stdout[:-1]
+
+    try:
+        shutil.copy(
+            f"{build_dir}/compile_commands.json",
+            f"{project_dir}/compile_commands.json",
+        )
+    except FileNotFoundError:
+        pass
 
     try:
         with open(f"{project_dir}/CMakeLists.txt", "r") as cmakelists:

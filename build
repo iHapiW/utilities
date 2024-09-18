@@ -2,6 +2,8 @@
 import sys
 import json
 import os
+import shutil
+import subprocess
 
 import colorama
 from termcolor import colored
@@ -59,11 +61,12 @@ def build(project_dir, has_cmake_presets, preset):
     if response != 0:
         print_err("Builder Raised Error")
         sys.exit(-1)
+    return build_dir
 
 
 def main():
 
-    preset = "default"
+    preset = "debug"
     if len(sys.argv) > 1:
         preset = sys.argv[1]
 
@@ -72,7 +75,20 @@ def main():
 
     has_cmake_presets = os.path.exists(f"{project_dir}/CMakePresets.json")
     configure(project_dir, has_cmake_presets, preset)
-    build(project_dir, has_cmake_presets, preset)
+    build_dir = build(project_dir, has_cmake_presets, preset)
+
+    result = subprocess.run(
+        ["bash", "-c", f"echo {build_dir}"], capture_output=True, text=True
+    )
+    build_dir = result.stdout[:-1]
+
+    try:
+        shutil.copy(
+            f"{build_dir}/compile_commands.json",
+            f"{project_dir}/compile_commands.json",
+        )
+    except FileNotFoundError:
+        pass
 
     print_success("Built !")
 
