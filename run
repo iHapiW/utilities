@@ -6,65 +6,105 @@ import os
 import re
 import json
 
-def print_err(text : str) -> None:
-    sys.stderr.write("\n[")
-    sys.stderr.write(colored("-", "red"));
-    sys.stderr.write("]")
-    sys.stderr.write(" {0}\n".format(text));
 
-def print_success(text : str) -> None:
-    sys.stderr.write("[")
-    sys.stderr.write(colored("+", "green"));
+def print_err(text: str) -> None:
+    sys.stderr.write("\n[")
+    sys.stderr.write(colored("-", "red"))
     sys.stderr.write("]")
-    sys.stderr.write(" {0}\n".format(text));
+    sys.stderr.write(" {0}\n".format(text))
+
+
+def print_success(text: str) -> None:
+    sys.stderr.write("[")
+    sys.stderr.write(colored("+", "green"))
+    sys.stderr.write("]")
+    sys.stderr.write(" {0}\n".format(text))
+
 
 colorama.init()
 
-def main():
-    project_dir = os.getcwd();
-    print_success("Building Project...")
 
-    build_flags = []
+def configure(project_dir, has_cmake_presets, preset):
+    response = 0
+    if has_cmake_presets:
+        response = os.system(
+            f"cmake {project_dir} --preset={preset} > /dev/null"
+        )
+    else:
+        response = os.system(
+            f"cmake -B{project_dir}/build {project_dir} > /dev/null"
+        )
 
-    try:
-        with open(f"{project_dir}/CMakeOptions.json", "r") as cmakeoptions:
-            try:
-                data = json.loads(cmakeoptions.read())
-            except json.JSONDecodeError:
-                print_err("Could'nt Decode CMakeOptions.json")
-                sys.exit(-1)
-
-            for key in data:
-                build_flags.append(f"-D{key}={data[key]}")
-    except FileNotFoundError:
-        pass
-
-    response = os.system(f"cmake -B{project_dir}/build {project_dir} {' '.join(build_flags)}> /dev/null");
     if response != 0:
         print_err("CMake Raised Error")
         sys.exit(-1)
-    response = os.system(f"cmake --build {project_dir}/build > /dev/null")
+
+
+def build(project_dir, has_cmake_presets, preset):
+    build_dir = "build"
+
+    if has_cmake_presets:
+
+        # used to resolve binaryDir in CMakePresets
+        os.environ["sourceDir"] = os.getcwd()
+
+        with open(f"{project_dir}/CMakePresets.json") as cmakepresets:
+            data = json.loads(cmakepresets.read())
+            presets = data["configurePresets"]
+            for p in presets:
+                if p["name"] == preset:
+                    build_dir = p["binaryDir"]
+
+    response = os.system(f"cmake --build {build_dir} > /dev/null")
     if response != 0:
-        print_err("Makefile Builder Raised Error")
+        print_err("Builder Raised Error")
         sys.exit(-1)
+
+    return build_dir
+
+
+def main():
+    preset = "default"
+    if len(sys.argv) > 1 and sys.argv[1] != "--args":
+        preset = sys.argv[1]
+
+    project_dir = os.getcwd()
+    print_success("Building Project...")
+
+    has_cmake_presets = os.path.exists(f"{project_dir}/CMakePresets.json")
+
+    configure(project_dir, has_cmake_presets, preset)
+    build_dir = build(project_dir, has_cmake_presets, preset)
 
     try:
         with open(f"{project_dir}/CMakeLists.txt", "r") as cmakelists:
-            resp = re.findall(r"^project\(\s*?([^\s]+).*\)$", cmakelists.read(), re.MULTILINE)
+            args = []
+            try:
+                argsIdx = sys.argv.index("--args")
+                args = sys.argv[argsIdx + 1 :]
+            except ValueError:
+                pass
+
+            resp = re.findall(
+                r"^project\(\s*?([^\s]+).*\)$", cmakelists.read(), re.MULTILINE
+            )
             for project_name in resp:
                 if sys.platform == "linux":
                     print_success(f"Running {project_name} ...\n")
-                    os.system(f"{project_dir}/build/{project_name} {' '.join(sys.argv)}")
+                    os.system(f"{build_dir}/{project_name} {' '.join(args)}")
                 elif sys.platform == "win32":
                     print_success(f"Running {project_name}.exe ...\n")
-                    os.system(f"{project_dir}/build/{project_name}.exe {' '.join(sys.argv)}")
+                    os.system(
+                        f"${build_dir}/{project_name}.exe {' '.join(args)}"
+                    )
                 else:
-                    print_err("Unknown System platform to Execute Project");
+                    print_err("Unknown System platform to Execute Project")
                 print("\n---------------------------------------------")
 
     except FileNotFoundError:
         print_err("No Project Found in this Directory")
         sys.exit(-1)
+
 
 if __name__ == "__main__":
     main()

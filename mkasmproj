@@ -50,42 +50,42 @@ help = "Usage: {0} {{PROJECT_NAME}}"
 
 # Helper Funcitons
 
-def print_err(text : str) -> None:
-    sys.stderr.write("[")
-    sys.stderr.write(colored("-", "red"));
-    sys.stderr.write("]")
-    sys.stderr.write(" {0}\n".format(text));
 
-def print_success(text : str) -> None:
+def print_err(text: str) -> None:
     sys.stderr.write("[")
-    sys.stderr.write(colored("+", "green"));
+    sys.stderr.write(colored("-", "red"))
     sys.stderr.write("]")
-    sys.stderr.write(" {0}\n".format(text));
+    sys.stderr.write(" {0}\n".format(text))
+
+
+def print_success(text: str) -> None:
+    sys.stderr.write("[")
+    sys.stderr.write(colored("+", "green"))
+    sys.stderr.write("]")
+    sys.stderr.write(" {0}\n".format(text))
+
 
 # Enable Colors
 colorama.init()
 
+
 def main():
-
-    # Small Gap between Command and Output
-    print()
-
     argc = len(sys.argv)
 
     this_file = sys.argv[0]
 
     # Print Help if Needed
     if argc > 2 and (sys.argv[1] == "--help" or sys.argv[1] == "-h"):
-        print(help.format(this_file));
-        sys.exit(-1);
+        print(help.format(this_file))
+        sys.exit(-1)
 
     # Check if we have Enough Argument
     if argc < 2:
         print_err("Not Enough Argument")
-        print(help.format(this_file));
-        sys.exit(-1);
+        print(help.format(this_file))
+        sys.exit(-1)
 
-    project_name = sys.argv[1];
+    project_name = sys.argv[1]
 
     # Get Project Path
     executed_path = os.getcwd()
@@ -93,19 +93,20 @@ def main():
 
     # Check if Directory Exists
     if os.path.exists(project_dir):
-        print_err("Directory with Project Name Exists!");
-        sys.exit(-1);
+        print_err("Directory with Project Name Exists!")
+        sys.exit(-1)
 
     os.mkdir(project_dir)
 
     with open(f"{project_dir}/CMakeLists.txt", "w") as cmakelists:
         cmakelists.write(cmake_file_content.format(project_name))
     with open(f"{project_dir}/CMakeOptions.json", "w") as cmakeoptions:
-        cmakeoptions.write(cmake_flags);
+        cmakeoptions.write(cmake_flags)
     os.mkdir(f"{project_dir}/src")
     with open(f"{project_dir}/src/main.asm", "w") as main:
         main.write(exe_main)
     print_success(f"Successfully Made {project_name} Project")
+
 
 if __name__ == "__main__":
     main()

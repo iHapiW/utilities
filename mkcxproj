@@ -48,9 +48,19 @@ target_compile_options(${{PROJECT_NAME}}
 target_include_directories(${{PROJECT_NAME}} PRIVATE "${{CMAKE_CURRENT_SOURCE_DIR}}/include")
 """
 
-# Making Build Time CMAKE Flags in Json ( To Use later in build & run )
+# Making CMakePresets.json
 cmake_flags = """{
-    "CMAKE_BUILD_TYPE" : "Debug"
+    "version": 2,
+    "configurePresets": [
+        {
+            "name": "default",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            }
+        }
+    ]
 }"""
 
 # Src file for Exe Projects
@@ -118,9 +128,6 @@ colorama.init()
 
 def main():
 
-    # Small Gap between Command and Output
-    print()
-
     argc = len(sys.argv)
 
     this_file = sys.argv[0]
@@ -159,8 +166,8 @@ def main():
     if project_type == "exe":
         with open(f"{project_dir}/CMakeLists.txt", "w") as cmakelists:
             cmakelists.write(cmake_config(project_name, project_type))
-        with open(f"{project_dir}/CMakeOptions.json", "w") as cmakeoptions:
-            cmakeoptions.write(cmake_flags)
+        with open(f"{project_dir}/CMakePresets.json", "w") as cmakepresets:
+            cmakepresets.write(cmake_flags)
         os.mkdir(f"{project_dir}/src")
         os.mkdir(f"{project_dir}/include")
         with open(f"{project_dir}/src/main.cpp", "w") as main:
@@ -169,14 +176,19 @@ def main():
     elif project_type == "libstatic" or project_type == "libdynamic":
         with open(f"{project_dir}/CMakeLists.txt", "w") as cmakelists:
             cmakelists.write(cmake_config(project_name, project_type))
-        with open(f"{project_dir}/CMakeOptions.json", "w") as cmakeoptions:
-            cmakeoptions.write(cmake_flags)
+        with open(f"{project_dir}/CMakePresets.json", "w") as cmakepresets:
+            cmakepresets.write(cmake_flags)
         os.mkdir(f"{project_dir}/src")
         os.mkdir(f"{project_dir}/include")
         with open(f"{project_dir}/src/{project_name}.cpp", "w") as src:
             src.write(lib_main.format(project_name))
         with open(f"{project_dir}/include/{project_name}.hpp", "w") as header:
             header.write(lib_header.format(project_name.upper()))
+
+    os.chdir(project_dir)
+    os.system(f"vcpkg new --name={project_name} --version=1.0.0")
+
+    print_success(f"Successfully Made {project_name} Project")
 
 
 if __name__ == "__main__":

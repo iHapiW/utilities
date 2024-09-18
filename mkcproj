@@ -22,8 +22,19 @@ file(GLOB SRC
 target_include_directories(${{PROJECT_NAME}} PRIVATE "${{CMAKE_CURRENT_SOURCE_DIR}}/include")
 """
 
+# Making CMakePresets.json
 cmake_flags = """{
-    "CMAKE_BUILD_TYPE" : "Debug"
+    "version": 2,
+    "configurePresets": [
+        {
+            "name": "default",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            }
+        }
+    ]
 }"""
 
 # Src file for Exe Projects
@@ -37,7 +48,7 @@ int main(int argc, char* argv[])
 """
 
 # Src File for lib Projects
-lib_main = "#include \"{0}.h\""
+lib_main = '#include "{0}.h"'
 
 # Header File for Lib Projects
 lib_header = """#ifndef {0}_H
@@ -55,35 +66,43 @@ Project Types:
 
 # Helper Funcitons
 
-def print_err(text : str) -> None:
-    sys.stderr.write("[")
-    sys.stderr.write(colored("-", "red"));
-    sys.stderr.write("]")
-    sys.stderr.write(" {0}\n".format(text));
 
-def print_success(text : str) -> None:
+def print_err(text: str) -> None:
     sys.stderr.write("[")
-    sys.stderr.write(colored("+", "green"));
+    sys.stderr.write(colored("-", "red"))
     sys.stderr.write("]")
-    sys.stderr.write(" {0}\n".format(text));
+    sys.stderr.write(" {0}\n".format(text))
 
-def cmake_config(project_name : str, project_type : str) -> str:
+
+def print_success(text: str) -> None:
+    sys.stderr.write("[")
+    sys.stderr.write(colored("+", "green"))
+    sys.stderr.write("]")
+    sys.stderr.write(" {0}\n".format(text))
+
+
+def cmake_config(project_name: str, project_type: str) -> str:
     if project_type == "exe":
-        return cmake_file_content.format(a=project_name, b="add_executable(${PROJECT_NAME} ${SRC})")
+        return cmake_file_content.format(
+            a=project_name, b="add_executable(${PROJECT_NAME} ${SRC})"
+        )
     elif project_type == "libstatic":
-        return cmake_file_content.format(a=project_name, b="add_library(${PROJECT_NAME} STATIC ${SRC})")
+        return cmake_file_content.format(
+            a=project_name, b="add_library(${PROJECT_NAME} STATIC ${SRC})"
+        )
     elif project_type == "libdynamic":
-        return cmake_file_content.format(a=project_name, b="add_library(${PROJECT_NAME} SHARED ${SRC})")
+        return cmake_file_content.format(
+            a=project_name, b="add_library(${PROJECT_NAME} SHARED ${SRC})"
+        )
     else:
         return ""
+
 
 # Enable Colors
 colorama.init()
 
-def main():
 
-    # Small Gap between Command and Output
-    print()
+def main():
 
     argc = len(sys.argv)
 
@@ -91,17 +110,17 @@ def main():
 
     # Print Help if Needed
     if argc > 2 and (sys.argv[1] == "--help" or sys.argv[1] == "-h"):
-        print(help.format(this_file));
-        sys.exit(-1);
+        print(help.format(this_file))
+        sys.exit(-1)
 
     # Check if we have Enough Argument
     if argc < 3:
         print_err("Not Enough Argument")
-        print(help.format(this_file));
-        sys.exit(-1);
+        print(help.format(this_file))
+        sys.exit(-1)
 
-    project_name = sys.argv[1];
-    project_type = sys.argv[2];
+    project_name = sys.argv[1]
+    project_type = sys.argv[2]
 
     # Get Project Path
     executed_path = os.getcwd()
@@ -109,33 +128,32 @@ def main():
 
     # Check if Directory Exists
     if os.path.exists(project_dir):
-        print_err("Directory with Project Name Exists!");
-        sys.exit(-1);
+        print_err("Directory with Project Name Exists!")
+        sys.exit(-1)
 
     # Check Project Type
     if project_type not in ["exe", "libstatic", "libdynamic"]:
         print_err("Invalid Project Type!")
         print(help.format(this_file))
-        sys.exit(-1);
+        sys.exit(-1)
 
     os.mkdir(project_dir)
 
     if project_type == "exe":
         with open(f"{project_dir}/CMakeLists.txt", "w") as cmakelists:
             cmakelists.write(cmake_config(project_name, project_type))
-        with open(f"{project_dir}/CMakeOptions.json", "w") as cmakeoptions:
-            cmakeoptions.write(cmake_flags);
+        with open(f"{project_dir}/CMakePresets.json", "w") as cmakepresets:
+            cmakepresets.write(cmake_flags)
         os.mkdir(f"{project_dir}/src")
         os.mkdir(f"{project_dir}/include")
         with open(f"{project_dir}/src/main.c", "w") as main:
             main.write(exe_main)
-        print_success(f"Successfully Made {project_name} Project")
 
     elif project_type == "libstatic" or project_type == "libdynamic":
         with open(f"{project_dir}/CMakeLists.txt", "w") as cmakelists:
             cmakelists.write(cmake_config(project_name, project_type))
-        with open(f"{project_dir}/CMakeOptions.json", "w") as cmakeoptions:
-            cmakeoptions.write(cmake_flags);
+        with open(f"{project_dir}/CMakePresets.json", "w") as cmakepresets:
+            cmakepresets.write(cmake_flags)
         os.mkdir(f"{project_dir}/src")
         os.mkdir(f"{project_dir}/include")
         with open(f"{project_dir}/src/{project_name}.c", "w") as src:
@@ -143,7 +161,11 @@ def main():
         with open(f"{project_dir}/include/{project_name}.h", "w") as header:
             header.write(lib_header.format(project_name.upper()))
 
-        print_success(f"Successfully Made {project_name} Project")
+    os.chdir(project_dir)
+    os.system(f"vcpkg new --name={project_name} --version=1.0.0")
+
+    print_success(f"Successfully Made {project_name} Project")
+
 
 if __name__ == "__main__":
     main()
